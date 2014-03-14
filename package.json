@@ -1,0 +1,32 @@
+{
+  "name": "emptyc",
+  "version": "0.0.1",
+  "description": "emptyd client for running a single command on multiple hosts in a shmux-like manner",
+  "main": "./lib/main",
+  "bin" : {
+    "emptyc" : "./bin/emptyc"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/kmeaw/emptyc"
+  },
+  "keywords": [
+    "emptyd",
+    "emptyc",
+    "ssh",
+    "exec",
+    "multi"
+  ],
+  "author": "kmeaw",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/kmeaw/emptyc/issues"
+  },
+  "dependencies": {
+    "colors": "0.x.x",
+    "q": "1.x.x"
+  }
+}

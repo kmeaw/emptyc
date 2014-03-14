@@ -1,0 +1,30 @@
+#!/usr/bin/node
+// vim: ai:ts=2:sw=2:et:syntax=javascript
+
+var Q = require('q');
+Q.longStackSupport = true;
+var emptyc = require('../lib/emptyc');
+var path = require("path");
+var fs = require("fs");
+
+var configpath = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".emptyc.conf");
+var plugindir = path.join(path.dirname(__filename), "..", "plugins");
+
+Q.nfcall(fs.readFile, configpath, "utf-8")
+  .then(
+    function(data) { emptyc.Config = JSON.parse(data) },
+    function(){})
+  .then(function() { return Q.nfcall(fs.readdir, plugindir)})
+  .then(function(files) {
+    return Q.all(files.map(function(f) {
+      if (/^[^.].*[.]js$/.exec(f))
+      {
+        var module = require(path.join(plugindir, f));
+        if (module.init)
+          return module.init();
+        else
+          return Q.resolve();
+      }
+    }));
+  })
+  .then(emptyc.Commands._init).then(emptyc.Commands._start).done();
