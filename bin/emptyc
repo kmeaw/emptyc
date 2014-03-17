@@ -7,13 +7,19 @@ var emptyc = require('../lib/emptyc');
 var path = require("path");
 var fs = require("fs");
 
-var configpath = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".emptyc.conf");
+var configpath = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".empty.conf");
+var configpath2 = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".emptyc.conf");
 var plugindir = path.join(path.dirname(__filename), "..", "plugins");
 
-Q.nfcall(fs.readFile, configpath, "utf-8")
-  .then(
-    function(data) { emptyc.Config = JSON.parse(data) },
-    function(){})
+var applyconf = function(data) {
+  var user_config = JSON.parse(data);
+  user_config.__proto__ = emptyc.Config;
+  emptyc.Config = user_config;
+};
+
+Q.resolve()
+  .then(Q.nfcall(fs.readFile, configpath, "utf-8").then(applyconf, function(){}))
+  .then(Q.nfcall(fs.readFile, configpath2, "utf-8").then(applyconf, function(){}))
   .then(function() { return Q.nfcall(fs.readdir, plugindir)})
   .then(function(files) {
     return Q.all(files.map(function(f) {
