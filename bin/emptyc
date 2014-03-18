@@ -17,9 +17,13 @@ var applyconf = function(data) {
   emptyc.Config = user_config;
 };
 
+var defer = Q.defer();
+fs.exists(Config.plugin_dir, defer.resolve);
+
 Q.resolve()
   .then(Q.nfcall(fs.readFile, configpath, "utf-8").then(applyconf, function(){}))
   .then(Q.nfcall(fs.readFile, configpath2, "utf-8").then(applyconf, function(){}))
+  .then(defer.promise)
   .then(function(files) {
     var modules = dire(Config.plugin_dir, true, '.js');
     return Q.all(Object.keys(modules).map(function(key) {
