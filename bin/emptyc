@@ -6,10 +6,10 @@ Q.longStackSupport = true;
 var emptyc = require('../lib/emptyc');
 var path = require("path");
 var fs = require("fs");
+var dire = require("dire");
 
 var configpath = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".empty.conf");
 var configpath2 = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".emptyc.conf");
-var plugindir = path.join(path.dirname(__filename), "..", "plugins");
 
 var applyconf = function(data) {
   var user_config = JSON.parse(data);
@@ -20,17 +20,13 @@ var applyconf = function(data) {
 Q.resolve()
   .then(Q.nfcall(fs.readFile, configpath, "utf-8").then(applyconf, function(){}))
   .then(Q.nfcall(fs.readFile, configpath2, "utf-8").then(applyconf, function(){}))
-  .then(function() { return Q.nfcall(fs.readdir, plugindir)})
   .then(function(files) {
-    return Q.all(files.map(function(f) {
-      if (/^[^.].*[.]js$/.exec(f))
-      {
-        var module = require(path.join(plugindir, f));
-        if (module.init)
-          return module.init();
-        else
-          return Q.resolve();
-      }
+    var modules = dire(Config.plugin_dir, true, '.js');
+    return Q.all(Object.keys(modules).map(function(key) {
+      if (modules[key].init)
+        return modules[key].init(emptyc);
+      else
+        return Q.resolve();
     }));
   })
   .then(emptyc.Commands._init).then(emptyc.Commands._start).done();
