@@ -1,36 +1,62 @@
 #!/usr/bin/node
 // vim: ai:ts=2:sw=2:et:syntax=javascript
 
-var Q = require('q');
-Q.longStackSupport = true;
-var emptyc = require('../lib/emptyc');
-var path = require("path");
-var fs = require("fs");
-var dire = require("dire");
+(function() {
+  "use strict";
+  var Q = require('q');
+  Q.longStackSupport = true;
+  var Emptyc = require('../lib/emptyc');
+  var path = require("path");
+  var fs = require("fs");
+  var dire = require("dire");
+  var emptyc = new Emptyc();
 
-var configpath = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".empty.conf");
-var configpath2 = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".emptyc.conf");
+  var configpath = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".empty.conf");
+  var configpath2 = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".emptyc.conf");
 
-var applyconf = function(data) {
-  var user_config = JSON.parse(data);
-  user_config.__proto__ = emptyc.Config;
-  emptyc.Config = user_config;
-};
+  var applyconf = function(data) {
+    var user_config = JSON.parse(data);
+    var merge = function merge(target, source)
+    {
+      for (var k in source)
+      {
+        if ((target[k] instanceof Object) && (source[k] instanceof Object))
+          merge(target[k], source[k]);
+        else
+          target[k] = source[k];
+      }
+    };
+    merge(emptyc.config, user_config);
+  };
 
-var defer = Q.defer();
-fs.exists(Config.plugin_dir, defer.resolve);
-
-Q.resolve()
-  .then(Q.nfcall(fs.readFile, configpath, "utf-8").then(applyconf, function(){}))
-  .then(Q.nfcall(fs.readFile, configpath2, "utf-8").then(applyconf, function(){}))
-  .then(defer.promise)
-  .then(function(files) {
-    var modules = dire(Config.plugin_dir, true, '.js');
-    return Q.all(Object.keys(modules).map(function(key) {
-      if (modules[key].init)
-        return modules[key].init(emptyc);
+  Q.resolve()
+    .then(Q.nfcall(fs.readFile, configpath, "utf-8").then(applyconf, function(){}))
+    .then(Q.nfcall(fs.readFile, configpath2, "utf-8").then(applyconf, function(){}))
+    .then(function() {
+      var defer = Q.defer();
+      fs.exists(emptyc.config.plugin_dir, defer.resolve);
+      return defer.promise;
+    })
+    .then(function(exists) {
+      if (exists)
+      {
+        var modules = dire(emptyc.config.plugin_dir, true, '.js');
+        return Q.all(Object.keys(modules).map(function(key) {
+          if (modules[key].init)
+            return modules[key].init(emptyc);
+          else
+            return Q.resolve();
+        }));
+      }
       else
+      {
+        console.log("Missing %s", emptyc.config.plugin_dir);
         return Q.resolve();
-    }));
-  })
-  .then(emptyc.Commands._init).then(emptyc.Commands._start).done();
+      }
+    })
+    .then(function() {
+      process.title = path.basename(__filename, ".js");
+      return Q.resolve();
+    })
+    .then(emptyc.start.bind(emptyc)).done();
+}());
