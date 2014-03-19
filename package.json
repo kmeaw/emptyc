@@ -29,6 +29,7 @@
     "colors": "0.x.x",
     "q": "1.x.x",
     "dire": "1.x.x",
-    "mkdirp": "0.x.x"
+    "mkdirp": "0.x.x",
+    "node-cache": "0.x.x"
   }
 }
