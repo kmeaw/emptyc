@@ -5,7 +5,7 @@ var daemon = null;
 module.exports.init = function init(emptyc) {
   if (emptyc.config("autostarter.disable"))
     return Q.resolve();
-  return emptyc.napi("/ping").then(function() { return Q.resolve(); }, function() {
+  return emptyc.napi("ping").then(function() { return Q.resolve(); }, function() {
     if (!emptyc.config("autostarter.quiet"))
       console.log("autostarter: Daemon ping failed, spawning a new one...");
     daemon = spawn('emptyd', [], { stdio: 'pipe' });
