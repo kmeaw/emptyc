@@ -29,6 +29,8 @@
     merge(emptyc.config, user_config);
   };
 
+  var finalizers = [];
+
   Q.resolve()
     .then(Q.nfcall(fs.readFile, configpath, "utf-8").then(applyconf, function(){}))
     .then(Q.nfcall(fs.readFile, configpath2, "utf-8").then(applyconf, function(){}))
@@ -42,6 +44,8 @@
       {
         var modules = dire(emptyc.config.plugin_dir, true, '.js');
         return Q.all(Object.keys(modules).map(function(key) {
+          if (modules[key].fini)
+            finalizers.push(modules[key].fini.bind(modules[key]));
           if (modules[key].init)
             return modules[key].init(emptyc);
           else
@@ -58,5 +62,13 @@
       process.title = path.basename(__filename, ".js");
       return Q.resolve();
     })
-    .then(emptyc.start.bind(emptyc)).done();
+    .then(Q.all(emptyc.hooks.start))
+    .then(emptyc.start.bind(emptyc))
+    .then(function() {
+      finalizers.forEach(function(f) { f(emptyc); });
+      return Q.all(emptyc.hooks.exit)
+    })
+    .then(emptyc.commands.exit.bind(emptyc))
+    .then(function() { process.exit(0) })
+    .done();
 }());
