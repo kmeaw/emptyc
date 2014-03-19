@@ -10,9 +10,15 @@
   var fs = require("fs");
   var dire = require("dire");
   var emptyc = new Emptyc();
+  var NodeCache = require("node-cache");
+  var mkdirp = require('mkdirp');
 
-  var configpath = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".empty.conf");
-  var configpath2 = path.join(process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'], ".emptyc.conf");
+  var homepath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
+  var configpath = path.join(homepath, ".empty.conf");
+  var configpath2 = path.join(homepath, ".emptyc.conf");
+  var cachepath = path.join(process.env.XDG_CACHE_HOME || path.join(homepath, ".cache"), "emptyc");
+
+  mkdirp.sync(cachepath);
 
   var applyconf = function(data) {
     var user_config = JSON.parse(data);
@@ -30,6 +36,7 @@
   };
 
   var finalizers = [];
+  var modules = {};
 
   Q.resolve()
     .then(Q.nfcall(fs.readFile, configpath, "utf-8").then(applyconf, function(){}))
@@ -42,8 +49,16 @@
     .then(function(exists) {
       if (exists)
       {
-        var modules = dire(emptyc.config.plugin_dir, true, '.js');
+        modules = dire(emptyc.config.plugin_dir, true, '.js');
         return Q.all(Object.keys(modules).map(function(key) {
+          if (modules[key].cache)
+          {
+            var fkey = key.replace(/\//g, '.') + ".json";
+            var fpath = path.join(cachepath, fkey);
+            modules[key].cache.path = fpath;
+            if (fs.existsSync(fpath))
+              modules[key].cache.data = JSON.parse(fs.readFileSync(fpath, "utf-8"));
+          }
           if (modules[key].fini)
             finalizers.push(modules[key].fini.bind(modules[key]));
           if (modules[key].init)
@@ -59,6 +74,13 @@
       }
     })
     .then(function() {
+      var fpath = path.join(cachepath, "emptyc.json");
+      emptyc.cache.path = fpath;
+      if (fs.existsSync(fpath))
+        emptyc.cache.data = JSON.parse(fs.readFileSync(fpath, "utf-8"));
+      return Q.resolve();
+    })
+    .then(function() {
       process.title = path.basename(__filename, ".js");
       return Q.resolve();
     })
@@ -67,6 +89,15 @@
     .then(function() {
       finalizers.forEach(function(f) { f(emptyc); });
       return Q.all(emptyc.hooks.exit)
+    })
+    .then(function() {
+      for(var key in modules)
+      {
+        if (modules[key].cache && modules[key].cache.path)
+          fs.writeFileSync(modules[key].cache.path, JSON.stringify(modules[key].cache.data));
+      }
+      fs.writeFileSync(emptyc.cache.path, JSON.stringify(emptyc.cache.data));
+      return Q.resolve();
     })
     .then(emptyc.commands.exit.bind(emptyc))
     .then(function() { process.exit(0) })

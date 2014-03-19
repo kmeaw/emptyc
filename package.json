@@ -28,6 +28,7 @@
   "dependencies": {
     "colors": "0.x.x",
     "q": "1.x.x",
-    "dire": "1.x.x"
+    "dire": "1.x.x",
+    "mkdirp": "0.x.x"
   }
 }
