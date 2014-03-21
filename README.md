@@ -1,6 +1,6 @@
 emptyd node.js client implementation
 
-== Planned features ==
+### Planned features
 
  - [ ] aggregate multiple hosts output (mode == "stream");
  - [ ] job control (jobs, ctrl-z, fg);
