@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#!/usr/bin/env node
 // vim: ai:ts=2:sw=2:et:syntax=javascript
 
 (function() {
