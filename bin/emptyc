@@ -39,8 +39,8 @@
   var modules = {};
 
   Q.resolve()
-    .then(Q.nfcall(fs.readFile, configpath, "utf-8").then(applyconf, function(){}))
-    .then(Q.nfcall(fs.readFile, configpath2, "utf-8").then(applyconf, function(){}))
+    .then(function() { return Q.nfcall(fs.readFile, configpath, "utf-8").then(applyconf, function(){}); })
+    .then(function() { return Q.nfcall(fs.readFile, configpath2, "utf-8").then(applyconf, function(){}); })
     .then(function() {
       var defer = Q.defer();
       fs.exists(emptyc.config.plugin_dir, defer.resolve);
