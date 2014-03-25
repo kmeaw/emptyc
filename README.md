@@ -8,5 +8,5 @@ emptyd node.js client implementation
  - [ ] resolver plugin API;
  - [ ] switch to single host during session;
  - [ ] logging facility;
- - [ ] serial mode;
+ - [x] serial mode;
 
