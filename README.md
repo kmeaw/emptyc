@@ -1,5 +1,13 @@
 emptyd node.js client implementation
 
+### Commands
+
+ - toggle boolean.config.option
+ - su [user]
+ - ssh hostname
+ - run host1,host2,host3 command --with arguments
+ - exit
+
 ### Planned features
 
  - [ ] aggregate multiple hosts output (mode == "stream");
