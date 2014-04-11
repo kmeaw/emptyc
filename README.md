@@ -18,3 +18,7 @@ emptyd node.js client implementation
  - [ ] logging facility;
  - [x] serial mode;
 
+### How to install
+
+npm install emptyc
+

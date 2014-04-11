@@ -5,6 +5,7 @@
   "use strict";
   var Q = require('q');
   Q.longStackSupport = true;
+  var readline = require('readline');
   var Emptyc = require('../lib/emptyc');
   var path = require("path");
   var fs = require("fs");
@@ -12,6 +13,7 @@
   var emptyc = new Emptyc();
   var NodeCache = require("node-cache");
   var mkdirp = require('mkdirp');
+  var EventEmitter = require('events').EventEmitter;
 
   var homepath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
   var configpath = path.join(homepath, ".empty.conf");
@@ -37,6 +39,66 @@
 
   var finalizers = [];
   var modules = {};
+
+  var start = function(emptyc, defer) {
+    defer = defer || Q.defer();
+    var stop = function() { 
+      emptyc.running = false; 
+      defer.resolve();
+    };
+    var prevhistory = emptyc.rl && emptyc.rl.history;
+    emptyc.rl = readline.createInterface({input:process.stdin, output:process.stdout, completer:emptyc.completer.bind(emptyc)});
+    if (prevhistory)
+      emptyc.rl.history = prevhistory;
+    emptyc.running = true;
+    if (process.stdin.isTTY)
+    {
+      var prompt = emptyc.prompt();
+      emptyc.rl.setPrompt(prompt, prompt.stripColors.length);
+      emptyc.rl.prompt();
+    }
+    else
+      process.stdin.on('end', stop);
+    emptyc.rl.on('line', function(line) {
+      emptyc.ev = new EventEmitter();
+      var keypress = function keypress(chunk, key) {
+        emptyc.ev.emit("keypress", chunk, key);
+      };
+      if (process.stdin.isTTY)
+      {
+        emptyc.rl.removeListener('close', stop);
+        emptyc.rl.close();
+        process.openStdin();
+        process.stdin.setRawMode(true);
+        process.stdin.on("keypress", keypress);
+      }
+      emptyc.exec(line)
+        .then(function() { }, function(e) { console.error(e); })
+        .fin(function() { 
+          if (process.stdin.isTTY)
+          {
+            process.stdin.removeListener("keypress", keypress); 
+            if(emptyc.running)
+              start(emptyc, defer);
+            else
+            {
+              emptyc.rl.removeListener('close', stop);
+              stop();
+            }
+          }
+          else if (!emptyc.running)
+            stop();
+        }).done();
+    });
+    emptyc.rl.on('close', stop);
+    emptyc.rl.on('SIGINT', function() {
+      console.log("SIGINT");
+    });
+    return defer.promise;
+  };
+
+  if (!emptyc.config("plugin_dir"))
+    emptyc.config("plugin_dir", path.join(path.dirname(__filename), "..", "plugins"));
 
   Q.resolve()
     .then(function() { return Q.nfcall(fs.readFile, configpath, "utf-8").then(applyconf, function(){}); })
@@ -85,7 +147,7 @@
       return Q.resolve();
     })
     .then(Q.all(emptyc.hooks.start))
-    .then(emptyc.start.bind(emptyc))
+    .then(function() { return start(emptyc); })
     .then(function() {
       finalizers.forEach(function(f) { f(emptyc); });
       return Q.all(emptyc.hooks.exit)
