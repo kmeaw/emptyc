@@ -40,17 +40,67 @@
   var finalizers = [];
   var modules = {};
 
-  var start = function(emptyc, defer) {
-    defer = defer || Q.defer();
+  var start = function(emptyc) {
+    var defer = Q.defer();
     var stop = function() { 
       emptyc.running = false; 
       defer.resolve();
     };
     var prevhistory = emptyc.rl && emptyc.rl.history;
-    emptyc.rl = readline.createInterface({input:process.stdin, output:process.stdout, completer:emptyc.completer.bind(emptyc)});
+    if (!emptyc.rl)
+    {
+    var stream = require("stream");
+    emptyc.stdin = stream.Readable();
+    emptyc.stdin._read = function() {
+    };
+    emptyc.stdin.ready = true;
+    process.stdin.setRawMode(true);
+    process.stdin.on("readable", function() {
+      var d = process.stdin.read();
+      if (!emptyc.stdin.ready)
+      {
+        if (emptyc.ev)
+        {
+          if (emptyc.mode != "write")
+          {
+            switch (d.toString())
+            {
+              case 'w':
+                emptyc.oldmode = emptyc.mode;
+                emptyc.ev.emit("set-mode", "write");
+                console.log("Press ^] to activate ``%s'' mode.", emptyc.oldmode);
+                break;
+              case 'k':
+                emptyc.ev.emit("kill-child");
+                break;
+              case "\u0003":
+              case 'q':
+                emptyc.ev.emit("abort-session");
+                break;
+              case 's':
+                emptyc.ev.emit("show-status");
+                break;
+            }
+          }
+          else // mode == "write"
+          {
+            if (d.toString() == "\u001d")
+              emptyc.ev.emit("set-mode", emptyc.oldmode);
+            else
+              emptyc.ev.emit("write", d);
+          }
+        }
+        else
+          console.log("Not ready to read %s", d);
+        return;
+      }
+      if (d)
+        emptyc.stdin.push(d);
+    });
+    emptyc.rl = readline.createInterface({input:emptyc.stdin, output:process.stdout, completer:emptyc.completer.bind(emptyc)});
     if (prevhistory)
       emptyc.rl.history = prevhistory;
-    emptyc.running = true;
+    }
     if (process.stdin.isTTY)
     {
       var prompt = emptyc.prompt();
@@ -59,27 +109,27 @@
     }
     else
       process.stdin.on('end', stop);
+    emptyc.running = true;
     emptyc.rl.on('line', function(line) {
       emptyc.ev = new EventEmitter();
-      var keypress = function keypress(chunk, key) {
-        emptyc.ev.emit("keypress", chunk, key);
-      };
       if (process.stdin.isTTY)
       {
-        emptyc.rl.removeListener('close', stop);
-        emptyc.rl.close();
-        process.openStdin();
-        process.stdin.setRawMode(true);
-        process.stdin.on("keypress", keypress);
+        emptyc.stdin.ready = false;
       }
       emptyc.exec(line)
         .then(function() { }, function(e) { console.error(e); })
         .fin(function() { 
+          emptyc.stdin.ready = true;
           if (process.stdin.isTTY)
           {
-            process.stdin.removeListener("keypress", keypress); 
             if(emptyc.running)
-              start(emptyc, defer);
+            {
+              var prompt = emptyc.prompt();
+              emptyc.rl.setPrompt(prompt, prompt.stripColors.length);
+              if (emptyc.rl._refreshLine)
+                emptyc.rl._refreshLine();
+              emptyc.rl.prompt();
+            }
             else
             {
               emptyc.rl.removeListener('close', stop);
@@ -91,8 +141,10 @@
         }).done();
     });
     emptyc.rl.on('close', stop);
+    emptyc.rl.on('pause', function() { emptyc.rl.prompt(); });
+    process.on('SIGCONT', function() { process.stdin.setRawMode(true); });
     emptyc.rl.on('SIGINT', function() {
-      console.log("SIGINT");
+      emptyc.rl.write(null, {ctrl: true, name: 'u'});
     });
     return defer.promise;
   };
