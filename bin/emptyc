@@ -61,7 +61,7 @@
         var d = process.stdin.read();
         if (!emptyc.stdin.ready)
         {
-          if (emptyc.ev)
+          if (emptyc.ev && d)
           {
             if (emptyc.mode != "write")
             {
@@ -92,8 +92,6 @@
                 emptyc.ev.emit("write", d);
             }
           }
-          else
-            console.log("Not ready to read %s", d);
           return;
         }
         if (d)
@@ -125,6 +123,7 @@
             if(emptyc.running)
             {
               var prompt = emptyc.prompt();
+              process.stdin.setRawMode(false); process.stdin.setRawMode(true);
               emptyc.rl.setPrompt(prompt, prompt.stripColors.length);
               if (emptyc.rl._refreshLine)
                 emptyc.rl._refreshLine();
