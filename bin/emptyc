@@ -54,7 +54,10 @@
     emptyc.stdin._read = function() {
     };
     emptyc.stdin.ready = true;
-    process.stdin.setRawMode(true);
+    if (process.stdin.isTTY)
+    {
+      process.stdin.setRawMode(true);
+    }
     process.stdin.on("readable", function() {
       var d = process.stdin.read();
       if (!emptyc.stdin.ready)
@@ -142,7 +145,7 @@
     });
     emptyc.rl.on('close', stop);
     emptyc.rl.on('pause', function() { emptyc.rl.prompt(); });
-    process.on('SIGCONT', function() { process.stdin.setRawMode(true); });
+    process.on('SIGCONT', function() { process.stdin.setRawMode(false); process.stdin.setRawMode(true); });
     emptyc.rl.on('SIGINT', function() {
       emptyc.rl.write(null, {ctrl: true, name: 'u'});
     });
