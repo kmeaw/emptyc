@@ -46,63 +46,60 @@
       emptyc.running = false; 
       defer.resolve();
     };
-    var prevhistory = emptyc.rl && emptyc.rl.history;
     if (!emptyc.rl)
     {
-    var stream = require("stream");
-    emptyc.stdin = stream.Readable();
-    emptyc.stdin._read = function() {
-    };
-    emptyc.stdin.ready = true;
-    if (process.stdin.isTTY)
-    {
-      process.stdin.setRawMode(true);
-    }
-    process.stdin.on("readable", function() {
-      var d = process.stdin.read();
-      if (!emptyc.stdin.ready)
+      var stream = require("stream");
+      emptyc.stdin = stream.Readable();
+      emptyc.stdin._read = function() {
+      };
+      emptyc.stdin.ready = true;
+      if (process.stdin.isTTY)
       {
-        if (emptyc.ev)
+        process.stdin.setRawMode(true);
+      }
+      process.stdin.on("readable", function() {
+        var d = process.stdin.read();
+        if (!emptyc.stdin.ready)
         {
-          if (emptyc.mode != "write")
+          if (emptyc.ev)
           {
-            switch (d.toString())
+            if (emptyc.mode != "write")
             {
-              case 'w':
-                emptyc.oldmode = emptyc.mode;
-                emptyc.ev.emit("set-mode", "write");
-                console.log("Press ^] to activate ``%s'' mode.", emptyc.oldmode);
-                break;
-              case 'k':
-                emptyc.ev.emit("kill-child");
-                break;
-              case "\u0003":
-              case 'q':
-                emptyc.ev.emit("abort-session");
-                break;
-              case 's':
-                emptyc.ev.emit("show-status");
-                break;
+              switch (d.toString())
+              {
+                case 'w':
+                  emptyc.oldmode = emptyc.mode;
+                  emptyc.ev.emit("set-mode", "write");
+                  console.log("Press ^] to activate ``%s'' mode.", emptyc.oldmode);
+                  break;
+                case 'k':
+                  emptyc.ev.emit("kill-child");
+                  break;
+                case "\u0003":
+                case 'q':
+                  emptyc.ev.emit("abort-session");
+                  break;
+                case 's':
+                  emptyc.ev.emit("show-status");
+                  break;
+              }
+            }
+            else // mode == "write"
+            {
+              if (d.toString() == "\u001d")
+                emptyc.ev.emit("set-mode", emptyc.oldmode);
+              else
+                emptyc.ev.emit("write", d);
             }
           }
-          else // mode == "write"
-          {
-            if (d.toString() == "\u001d")
-              emptyc.ev.emit("set-mode", emptyc.oldmode);
-            else
-              emptyc.ev.emit("write", d);
-          }
+          else
+            console.log("Not ready to read %s", d);
+          return;
         }
-        else
-          console.log("Not ready to read %s", d);
-        return;
-      }
-      if (d)
-        emptyc.stdin.push(d);
-    });
-    emptyc.rl = readline.createInterface({input:emptyc.stdin, output:process.stdout, completer:emptyc.completer.bind(emptyc)});
-    if (prevhistory)
-      emptyc.rl.history = prevhistory;
+        if (d)
+          emptyc.stdin.push(d);
+      });
+      emptyc.rl = readline.createInterface({input:emptyc.stdin, output:process.stdout, completer:emptyc.completer.bind(emptyc)});
     }
     if (process.stdin.isTTY)
     {
@@ -144,8 +141,11 @@
         }).done();
     });
     emptyc.rl.on('close', stop);
-    emptyc.rl.on('pause', function() { emptyc.rl.prompt(); });
-    process.on('SIGCONT', function() { process.stdin.setRawMode(false); process.stdin.setRawMode(true); });
+    process.on('SIGTSTP', function() {
+      emptyc.rl.once('pause', function() { emptyc.rl.prompt(); });
+      process.once('SIGCONT', function() { process.stdin.setRawMode(false); process.stdin.setRawMode(true); });
+      process.kill(process.pid, 'SIGSTOP');
+    });
     emptyc.rl.on('SIGINT', function() {
       emptyc.rl.write(null, {ctrl: true, name: 'u'});
     });
