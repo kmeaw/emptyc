@@ -9,21 +9,21 @@
       process.stdin.setRawMode(false);
       process.stdin.pause();
       var client = spawn("ssh", [
-	  "-oStrictHostKeyChecking=no", "-oUserKnownHostsFile=/dev/null",
-	  "-l", this.config.user,
-	  car
-	], { stdio: "inherit" });
+          "-oStrictHostKeyChecking=no", "-oUserKnownHostsFile=/dev/null",
+          "-l", this.config.user,
+          car
+        ], { stdio: "inherit" });
       var inthandler = function() {
-	client.kill('SIGINT');
+        client.kill('SIGINT');
       };
       process.on('SIGINT', inthandler);
       client.on('close', function(code) {
-	process.stdin.resume();
-	process.removeListener('SIGINT', inthandler);
-	if (code !== 0)
-	  deferred.reject("SSH exited with code " + code);
-	else
-	  deferred.resolve();
+        process.stdin.resume();
+        process.removeListener('SIGINT', inthandler);
+        if (code !== 0)
+          deferred.reject("SSH exited with code " + code);
+        else
+          deferred.resolve();
       });
       return deferred.promise;
     };
@@ -33,19 +33,19 @@
       process.stdin.setRawMode(false);
       process.stdin.pause();
       var client = spawn("ping", [
-	  car
-	], { stdio: "inherit" });
+          car
+        ], { stdio: "inherit" });
       var inthandler = function() {
-	client.kill('SIGINT');
+        client.kill('SIGINT');
       };
       process.on('SIGINT', inthandler);
       client.on('close', function(code) {
-	process.stdin.resume();
-	process.removeListener('SIGINT', inthandler);
-	if (code !== 0)
-	  deferred.reject("ping exited with code " + code);
-	else
-	  deferred.resolve();
+        process.stdin.resume();
+        process.removeListener('SIGINT', inthandler);
+        if (code !== 0)
+          deferred.reject("ping exited with code " + code);
+        else
+          deferred.resolve();
       });
       return deferred.promise;
     };
