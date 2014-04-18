@@ -29,23 +29,24 @@
             if (emptyc.config("ipmi.suffix"))
               h = h + emptyc.config("ipmi.suffix");
             var client = spawn(ipmitool, [ "-H", h ].concat(args), { stdio: "inherit" });
+            process.stdout.write(h + ": ");
             var inthandler = function() {
               client.kill('SIGINT');
             };
             var deferred = Q.defer();
             process.on('SIGINT', inthandler);
             client.on('close', function(code) {
-              process.stdin.resume();
               process.removeListener('SIGINT', inthandler);
               if (code !== 0)
-                deferred.reject("ipmitool exited with code " + code);
-              else
-                deferred.resolve();
+                console.log("ipmitool exited with code %d", code);
+              deferred.resolve();
             });
             return deferred.promise;
           });
         });
         return funcs.reduce(Q.when, Q.resolve());
+      }).fin(function() {
+          process.stdin.resume();
       });
     };
   };
