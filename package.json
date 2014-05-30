@@ -1,6 +1,6 @@
 {
   "name": "emptyc",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "emptyd client for running a single command on multiple hosts in a shmux-like manner",
   "main": "./lib/main",
   "bin" : {

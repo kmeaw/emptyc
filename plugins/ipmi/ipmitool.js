@@ -38,7 +38,7 @@
             client.on('close', function(code) {
               process.removeListener('SIGINT', inthandler);
               if (code !== 0)
-                console.log("ipmitool exited with code %d", code);
+                emptyc.ev.emit("info", "ipmitool exited with code " + code);
               deferred.resolve();
             });
             return deferred.promise;

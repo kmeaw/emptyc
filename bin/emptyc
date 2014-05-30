@@ -13,6 +13,7 @@
   var emptyc = new Emptyc();
   var NodeCache = require("node-cache");
   var mkdirp = require('mkdirp');
+  var colors = require('colors');
   var EventEmitter = require('events').EventEmitter;
 
   var homepath = process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
@@ -88,6 +89,8 @@
             {
               if (d.toString() == "\u001d")
                 emptyc.ev.emit("set-mode", emptyc.oldmode);
+              else if (d.toString() == "\r")
+                emptyc.ev.emit("write", "\n");
               else
                 emptyc.ev.emit("write", d);
             }
@@ -98,6 +101,17 @@
           emptyc.stdin.push(d);
       });
       emptyc.rl = readline.createInterface({input:emptyc.stdin, output:process.stdout, completer:emptyc.completer.bind(emptyc)});
+      var resizers = process.stdout.listeners("resize");
+      process.stdout.removeAllListeners("resize");
+      process.stdout.on("resize", function() {
+        if (!emptyc.stdin.ready)
+          return;
+        var args = arguments;
+        var self = this;
+        resizers.forEach(function(r) {
+          r.apply(self, args);
+        });
+      });
     }
     if (process.stdin.isTTY)
     {
@@ -110,6 +124,42 @@
     emptyc.running = true;
     emptyc.rl.on('line', function(line) {
       emptyc.ev = new EventEmitter();
+      emptyc.ev.on("exit", function(key, code) {
+        if (code !== 0)
+          console.warn("%s (exit %d)", colors.red(key), code);
+      });
+      emptyc.ev.on("end", function(key) {
+        if (!emptyc.config.parallel)
+          console.log("");
+      });
+      emptyc.ev.on("info", function(data) {
+        console.log(data);
+      });
+      emptyc.ev.on("output", function(data, key, type) {
+        if (!type)
+        {
+          if (emptyc.config.parallel)
+            console.log("%s: %s", key, data.trim());
+          else
+            process.stdout.write(data);
+        }
+        else if (type == "stderr")
+        {
+          if (emptyc.config.parallel)
+            console.log("%s! %s", key, colors.red(data.trim()));
+          else
+            process.stderr.write(colors.red(data));
+        }
+        else
+          console.log("%s[%s] %s", key, type, data);
+      });
+      emptyc.ev.on("start", function(key) {
+        if (!emptyc.config.parallel)
+          console.log("=== %s ===", key);
+      });
+      emptyc.ev.on("warn", function(data, key) {
+        console.log("%s! %s", colors.red(key), data);
+      });
       if (process.stdin.isTTY)
       {
         emptyc.stdin.ready = false;

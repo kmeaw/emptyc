@@ -19,7 +19,7 @@ module.exports.init = function init(emptyc) {
     if (err.cookie == "bad")
       throw new Error('Bad cookie');
     if (!emptyc.config("autostarter.quiet"))
-      console.log("autostarter: Daemon ping failed, spawning a new one...");
+      emptyc.ev.emit("info", "autostarter: Daemon ping failed, spawning a new one...");
     emptyc.config("cookie", crypto.randomBytes(16).toString('hex'));
     var buffer = "";
     if (emptyc.config("autostarter.remote"))
@@ -30,8 +30,8 @@ module.exports.init = function init(emptyc) {
     fs.writeFileSync(cookie_path, emptyc.config("cookie"));
     process.umask(oldmask);
     daemon.on("error", function(err) {
-      console.error("autostarter: Daemon start failed: " + err + ", please try running emptyd manually.");
-      console.error(buffer);
+      emptyc.ev.emit("warn", "autostarter: Daemon start failed: " + err + ", please try running emptyd manually.");
+      emptyc.ev.emit("warn", buffer);
     });
     daemon.stdout.setEncoding('utf-8');
     daemon.stderr.setEncoding('utf-8');
@@ -44,8 +44,8 @@ module.exports.init = function init(emptyc) {
     daemon.on('close', function(code) {
       if (code !== 0)
       {
-        console.error("Daemon exited with code %d.", code);
-	console.error(buffer);
+        emptyc.ev.emit("warn", "Daemon exited with code " + code + ".");
+	emptyc.ev.emit("warn", buffer);
       }
       daemon = null;
     });
@@ -60,7 +60,7 @@ module.exports.fini = function fini(emptyc) {
       fs.unlinkSync(cookie_path);
     } catch(e) {}
     if (!emptyc.config("autostarter.quiet"))
-      console.log("Shutting down the daemon...");
+      emptyc.ev.emit("info", "Shutting down the daemon...");
   }
   return Q.resolve();
 };
