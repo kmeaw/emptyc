@@ -41,6 +41,8 @@
   var ev_interface = function() {
     emptyc.ev = new EventEmitter();
     emptyc.ev.on("exit", function(key, code) {
+      if (emptyc.config.parallel)
+        process.stdout.write("\r\u001b[2K");
       if (code !== 0)
         console.warn("%s (exit %d)", colors.red(key), code);
     });
@@ -48,33 +50,63 @@
       if (!emptyc.config.parallel)
         console.log("");
     });
+    var progress_chars = "/-\\|";
+    var progress_line = "";
+    var PSCALE = 40;
+    emptyc.ev.on("progress", function(a, b, msg) {
+      if (emptyc.config.parallel)
+      {
+        var c = progress_chars.charAt(0);
+        var value = a/b;
+        progress_chars = progress_chars.substr(1) + c;
+        progress_line = "\r\u001b[2K[" + colors.green(Array(parseInt(value*PSCALE)+1).join("|"));
+        if (value <= 0.9)
+          progress_line = progress_line + Array(PSCALE-parseInt(value*PSCALE)+1).join(" ");
+        progress_line = progress_line + "] " + c + " " + a + "/" + b + (msg ? " " + msg : "") + "\r";
+        process.stdout.write(progress_line);
+      }
+    });
     emptyc.ev.on("info", function(data) {
+      if (emptyc.config.parallel)
+        process.stdout.write("\r\u001b[2K");
       console.log(data);
+      process.stdout.write(progress_line);
     });
     emptyc.ev.on("output", function(data, key, type) {
+      if (emptyc.config.parallel)
+        process.stdout.write("\r\u001b[2K");
       if (!type)
       {
         if (emptyc.config.parallel)
-          console.log("%s: %s", key, data.trim());
+          data.trim().split(/[\r\n]/).forEach(function(line) {
+            console.log("%s: %s", key, line.trim());
+          });
         else
           process.stdout.write(data);
       }
       else if (type == "stderr")
       {
         if (emptyc.config.parallel)
-          console.log("%s! %s", key, colors.red(data.trim()));
+          data.trim().split(/[\r\n]/).forEach(function(line) {
+            console.log("%s! %s", key, colors.red(line.trim()));
+          });
         else
           process.stderr.write(colors.red(data));
       }
       else
         console.log("%s[%s] %s", key, type, data);
+      process.stdout.write(progress_line);
     });
     emptyc.ev.on("start", function(key) {
+      process.stdout.write(progress_line);
       if (!emptyc.config.parallel)
         console.log("=== %s ===", key);
     });
     emptyc.ev.on("warn", function(data, key) {
+      if (emptyc.config.parallel)
+        process.stdout.write("\r\u001b[2K");
       console.log("%s! %s", colors.red(key), data);
+      process.stdout.write(progress_line);
     });
   };
 
