@@ -60,7 +60,7 @@
         var value = a/b;
         progress_chars = progress_chars.substr(1) + c;
         progress_line = "\r\u001b[2K[" + colors.green(Array(parseInt(value*PSCALE)+1).join("|"));
-        if (value <= 0.9)
+        if (PSCALE-parseInt(value*PSCALE) > 0)
           progress_line = progress_line + Array(PSCALE-parseInt(value*PSCALE)+1).join(" ");
         progress_line = progress_line + "] " + c + " " + a + "/" + b + (msg ? " " + msg : "") + "\r";
         process.stdout.write(progress_line);
