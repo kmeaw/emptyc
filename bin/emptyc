@@ -38,6 +38,46 @@
     merge(emptyc.config, user_config);
   };
 
+  var ev_interface = function() {
+    emptyc.ev = new EventEmitter();
+    emptyc.ev.on("exit", function(key, code) {
+      if (code !== 0)
+        console.warn("%s (exit %d)", colors.red(key), code);
+    });
+    emptyc.ev.on("end", function(key) {
+      if (!emptyc.config.parallel)
+        console.log("");
+    });
+    emptyc.ev.on("info", function(data) {
+      console.log(data);
+    });
+    emptyc.ev.on("output", function(data, key, type) {
+      if (!type)
+      {
+        if (emptyc.config.parallel)
+          console.log("%s: %s", key, data.trim());
+        else
+          process.stdout.write(data);
+      }
+      else if (type == "stderr")
+      {
+        if (emptyc.config.parallel)
+          console.log("%s! %s", key, colors.red(data.trim()));
+        else
+          process.stderr.write(colors.red(data));
+      }
+      else
+        console.log("%s[%s] %s", key, type, data);
+    });
+    emptyc.ev.on("start", function(key) {
+      if (!emptyc.config.parallel)
+        console.log("=== %s ===", key);
+    });
+    emptyc.ev.on("warn", function(data, key) {
+      console.log("%s! %s", colors.red(key), data);
+    });
+  };
+
   var finalizers = [];
   var modules = {};
 
@@ -123,43 +163,6 @@
       process.stdin.on('end', stop);
     emptyc.running = true;
     emptyc.rl.on('line', function(line) {
-      emptyc.ev = new EventEmitter();
-      emptyc.ev.on("exit", function(key, code) {
-        if (code !== 0)
-          console.warn("%s (exit %d)", colors.red(key), code);
-      });
-      emptyc.ev.on("end", function(key) {
-        if (!emptyc.config.parallel)
-          console.log("");
-      });
-      emptyc.ev.on("info", function(data) {
-        console.log(data);
-      });
-      emptyc.ev.on("output", function(data, key, type) {
-        if (!type)
-        {
-          if (emptyc.config.parallel)
-            console.log("%s: %s", key, data.trim());
-          else
-            process.stdout.write(data);
-        }
-        else if (type == "stderr")
-        {
-          if (emptyc.config.parallel)
-            console.log("%s! %s", key, colors.red(data.trim()));
-          else
-            process.stderr.write(colors.red(data));
-        }
-        else
-          console.log("%s[%s] %s", key, type, data);
-      });
-      emptyc.ev.on("start", function(key) {
-        if (!emptyc.config.parallel)
-          console.log("=== %s ===", key);
-      });
-      emptyc.ev.on("warn", function(data, key) {
-        console.log("%s! %s", colors.red(key), data);
-      });
       if (process.stdin.isTTY)
       {
         emptyc.stdin.ready = false;
@@ -167,6 +170,7 @@
       emptyc.exec(line)
         .then(function() { }, function(e) { console.error(e); })
         .fin(function() { 
+          ev_interface();
           emptyc.stdin.ready = true;
           if (process.stdin.isTTY)
           {
@@ -200,6 +204,8 @@
     });
     return defer.promise;
   };
+
+  ev_interface();
 
   if (!emptyc.config("plugin_dir"))
     emptyc.config("plugin_dir", path.join(path.dirname(__filename), "..", "plugins"));
