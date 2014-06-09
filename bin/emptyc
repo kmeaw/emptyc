@@ -200,7 +200,11 @@
         emptyc.stdin.ready = false;
       }
       emptyc.exec(line)
-        .then(function() { }, function(e) { console.error(e); })
+        .then(function() { }, function(e) { 
+          if (emptyc.config.parallel)
+            process.stderr.write("\r\u001b[2K");
+          console.error(e); 
+        })
         .fin(function() { 
           ev_interface();
           emptyc.stdin.ready = true;
