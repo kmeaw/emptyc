@@ -20,6 +20,7 @@
   var configpath = path.join(homepath, ".empty.conf");
   var configpath2 = path.join(homepath, ".emptyc.conf");
   var cachepath = path.join(process.env.XDG_CACHE_HOME || path.join(homepath, ".cache"), "emptyc");
+  var historypath = path.join(homepath, ".emptyc.history");
 
   mkdirp.sync(cachepath);
 
@@ -185,6 +186,8 @@
           emptyc.stdin.push(d);
       });
       emptyc.rl = readline.createInterface({input:emptyc.stdin, output:process.stdout, completer:emptyc.completer.bind(emptyc)});
+      if (fs.existsSync(historypath))
+        emptyc.rl.history = fs.readFileSync(historypath, {encoding:"utf-8"}).split("\n").reverse().slice(1);
       emptyc.rl._refreshLine = eval('('+emptyc.rl._refreshLine.toString().replace(/exports/g,'readline').replace(/line\.length/g,'colors.stripColors(line).length')+')');
 
       var resizers = process.stdout.listeners("resize");
@@ -211,6 +214,7 @@
       {
         emptyc.stdin.ready = false;
       }
+      fs.appendFileSync(historypath, line + "\n");
       emptyc.exec(line)
         .then(function() { }, function(e) { 
           if (emptyc.config.parallel)
