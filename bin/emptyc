@@ -114,6 +114,16 @@
   var modules = {};
 
   var start = function(emptyc) {
+    var prompt_reset = function() {
+      process.stdin.setRawMode(false); process.stdin.setRawMode(true);
+      var saved_prompt = emptyc.prompt();
+      var stripped_prompt = colors.stripColors(saved_prompt);
+      emptyc.rl.setPrompt(saved_prompt, stripped_prompt.length);
+      if (emptyc.rl._refreshLine)
+        emptyc.rl._refreshLine();
+      else
+        emptyc.rl.prompt();
+    };
     var defer = Q.defer();
     var stop = function() { 
       emptyc.running = false; 
@@ -173,6 +183,8 @@
           emptyc.stdin.push(d);
       });
       emptyc.rl = readline.createInterface({input:emptyc.stdin, output:process.stdout, completer:emptyc.completer.bind(emptyc)});
+      emptyc.rl._refreshLine = eval('('+emptyc.rl._refreshLine.toString().replace(/exports/g,'readline').replace(/line\.length/g,'colors.stripColors(line).length')+')');
+
       var resizers = process.stdout.listeners("resize");
       process.stdout.removeAllListeners("resize");
       process.stdout.on("resize", function() {
@@ -187,9 +199,7 @@
     }
     if (process.stdin.isTTY)
     {
-      var prompt = emptyc.prompt();
-      emptyc.rl.setPrompt(prompt, prompt.stripColors.length);
-      emptyc.rl.prompt();
+      prompt_reset();
     }
     else
       process.stdin.on('end', stop);
@@ -212,12 +222,7 @@
           {
             if(emptyc.running)
             {
-              var prompt = emptyc.prompt();
-              process.stdin.setRawMode(false); process.stdin.setRawMode(true);
-              emptyc.rl.setPrompt(prompt, prompt.stripColors.length);
-              if (emptyc.rl._refreshLine)
-                emptyc.rl._refreshLine();
-              emptyc.rl.prompt();
+              prompt_reset();
             }
             else
             {
