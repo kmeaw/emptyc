@@ -71,6 +71,8 @@
         process.stdout.write("\r\u001b[2K");
       console.log(data);
       process.stdout.write(progress_line);
+      if (emptyc.stdin.ready && emptyc.rl._refreshLine)
+        emptyc.rl._refreshLine();
     });
     emptyc.ev.on("output", function(data, key, type) {
       if (emptyc.config.parallel)
