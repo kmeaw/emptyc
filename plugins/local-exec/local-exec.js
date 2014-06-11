@@ -49,5 +49,27 @@
       });
       return deferred.promise;
     };
+
+    emptyc.commands.local = function(car) {
+      var deferred = Q.defer();
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+      var client = spawn("sh", [
+          "-c", car
+        ], { stdio: "inherit" });
+      var inthandler = function() {
+        client.kill('SIGINT');
+      };
+      process.on('SIGINT', inthandler);
+      client.on('close', function(code) {
+        process.stdin.resume();
+        process.removeListener('SIGINT', inthandler);
+        if (code !== 0)
+          deferred.reject("exited with code " + code);
+        else
+          deferred.resolve();
+      });
+      return deferred.promise;
+    };
   };
 }());
