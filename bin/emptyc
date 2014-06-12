@@ -26,17 +26,7 @@
 
   var applyconf = function(data) {
     var user_config = JSON.parse(data);
-    var merge = function merge(target, source)
-    {
-      for (var k in source)
-      {
-        if ((target[k] instanceof Object) && (source[k] instanceof Object))
-          merge(target[k], source[k]);
-        else
-          target[k] = source[k];
-      }
-    };
-    merge(emptyc.config, user_config);
+    emptyc.config(user_config);
   };
 
   var ev_interface = function() {
@@ -162,10 +152,11 @@
                   emptyc.ev.emit("kill-child");
                   break;
                 case "\u0003":
-                case 'q':
+                case 'Q':
                   emptyc.ev.emit("abort-session");
                   break;
                 case 's':
+                case 'r':
                   emptyc.ev.emit("show-status");
                   break;
               }
@@ -269,7 +260,7 @@
       if (exists)
       {
         modules = dire(emptyc.config.plugin_dir, true, '.js');
-        return Q.all(Object.keys(modules).map(function(key) {
+        return Q.all(Object.keys(modules).sort().map(function(key) {
           if (modules[key].cache)
           {
             var fkey = key.replace(/\//g, '.') + ".json";
