@@ -18,8 +18,6 @@ module.exports.init = function init(emptyc) {
     .then(function() { return Q.resolve(); }, function(err) {
     if (err.cookie == "bad")
       throw new Error('Bad cookie');
-    if (!emptyc.config("autostarter.quiet"))
-      emptyc.ev.emit("info", "autostarter: Daemon ping failed, spawning a new one...");
     emptyc.config("cookie", crypto.randomBytes(16).toString('hex'));
     var buffer = "";
     if (emptyc.config("autostarter.remote"))
