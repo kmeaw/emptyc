@@ -155,9 +155,16 @@
                 case 'Q':
                   emptyc.ev.emit("abort-session");
                   break;
-                case 's':
                 case 'r':
-                  emptyc.ev.emit("show-status");
+                case 's':
+                  emptyc.ev.emit("show-status", function(data) {
+                    if (emptyc.config.parallel)
+                      process.stdout.write("\r\u001b[2K");
+                    console.log(data);
+                    process.stdout.write(progress_line);
+                    if (emptyc.stdin.ready && emptyc.rl._refreshLine)
+                      emptyc.rl._refreshLine();
+                  });
                   break;
               }
             }
