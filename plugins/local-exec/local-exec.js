@@ -30,8 +30,8 @@
     };
 
     emptyc.commands.ping = function(car) {
-      var cell = emptyc.argshift(car);
       var self = this;
+      var cell = self.argshift(car);
       var children = [];
       if (!car || !cell.car) return Q.reject("ping <hosts> [port]");
       return this.resolve([cell.car]).then(function(keys) {
