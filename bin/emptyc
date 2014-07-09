@@ -29,6 +29,7 @@
     emptyc.config(user_config);
   };
 
+  var progress_line = "";
   var ev_interface = function() {
     emptyc.ev = new EventEmitter();
     emptyc.ev.on("exit", function(key, code) {
@@ -42,7 +43,6 @@
         console.log("");
     });
     var progress_chars = "/-\\|";
-    var progress_line = "";
     var PSCALE = 40;
     emptyc.ev.on("progress", function(a, b, msg) {
       if (emptyc.config.parallel)
@@ -220,7 +220,8 @@
           console.error(e); 
         })
         .fin(function() { 
-          ev_interface();
+          //ev_interface();
+          progress_line = "";
           emptyc.stdin.ready = true;
           if (process.stdin.isTTY)
           {
