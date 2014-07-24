@@ -44,6 +44,10 @@
               client.destroy();
               deferred.resolve();
             });
+            setTimeout(function() {
+              client.destroy();
+              deferred.reject(host);
+            }, 2000);
             client.on('error', function(code) {
               client.destroy();
               deferred.reject(host);
