@@ -19,8 +19,11 @@
       if (emptyc.config("ipmi.extra"))
         args = emptyc.config("ipmi.extra").split(/\s+/).concat(args);
       return emptyc.resolve(cell.car.split(',')).then(function(hosts) {
-        process.stdin.setRawMode(false);
-        process.stdin.pause();
+        if (process.stdin.setRawMode)
+        {
+          process.stdin.setRawMode(false);
+          process.stdin.pause();
+        }
         var funcs = [];
         hosts.forEach(function(h) {
           funcs.push(function() {
