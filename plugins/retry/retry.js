@@ -5,14 +5,15 @@
 
   module.exports.init = function retry_init(emptyc) {
     var failed = [];
+    var cmd = null;
 
     emptyc.ev.on("failed", function(f) { failed = f; });
-    emptyc.ev.on("run", function(f) { failed = []; });
+    emptyc.ev.on("run", function(sid, c) { failed = []; cmd = c; });
 
     emptyc.commands.retry = function(args) {
-      if (!args) return Q.reject("retry <cmd>");
+      if (!args && !cmd) return Q.reject("retry <cmd>");
       if (failed.length === 0) return Q.resolve();
-      return emptyc.commands.run.apply(emptyc, [failed.join(',') + " " + args]);
+      return emptyc.commands.run.apply(emptyc, [failed.join(',') + " " + (args || cmd)]);
     };
   };
 }());
