@@ -105,6 +105,7 @@
     };
 
     emptyc.commands.local = function(car) {
+      if (!car) return Q.reject("local <cmd>");
       var deferred = Q.defer();
       process.stdin.setRawMode(false);
       process.stdin.pause();
