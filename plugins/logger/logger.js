@@ -44,6 +44,7 @@
     emptyc.ev.on("idle", handlers.idle);
 
     emptyc.commands.show = function(car) {
+      /* help: <host>: show last output for specified host */
       var self = this;
       var cell = self.argshift(car);
       if (!car || !cell.car)

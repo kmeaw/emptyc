@@ -6,6 +6,7 @@
   var net = require('net');
   module.exports.init = function local_init(emptyc) {
     emptyc.commands.ssh = function(car) {
+      /* help: <host>: run interactive ssh to <host> */
       var deferred = Q.defer();
       process.stdin.setRawMode(false);
       process.stdin.pause();
@@ -30,6 +31,7 @@
     };
 
     emptyc.commands.ping = function(car) {
+      /* help: <hosts> [<port>]: check hosts availability over ICMP or TCP */
       var self = this;
       var cell = self.argshift(car);
       var children = [];
@@ -105,6 +107,7 @@
     };
 
     emptyc.commands.local = function(car) {
+      /* help: <cmd>: run cmd on local system */
       if (!car) return Q.reject("local <cmd>");
       var deferred = Q.defer();
       process.stdin.setRawMode(false);

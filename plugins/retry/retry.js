@@ -11,6 +11,7 @@
     emptyc.ev.on("run", function(sid, c) { failed = []; cmd = c; });
 
     emptyc.commands.retry = function(args) {
+      /* help: [<cmd>]: retry last failed run on failed hosts */
       if (!args && !cmd) return Q.reject("retry <cmd>");
       if (failed.length === 0) return Q.resolve();
       return emptyc.commands.run.apply(emptyc, [failed.join(',') + " " + (args || cmd)]);

@@ -11,6 +11,7 @@
 
   module.exports.init = function ipmi_init(emptyc) {
     emptyc.commands.ipmi = function(car) {
+      /* help: <hosts> <command>: run ipmitool command for hosts */
       var cell;
       if (!car)
         return Q.reject("ipmi hosts command");
