@@ -5,6 +5,7 @@
   var Q = require('q');
   var ipmitool = "ipmitool";
   var fs = require('fs');
+  var util = require('util');
 
   if (fs.existsSync("/usr/sbin/ipmitool"))
     ipmitool = "/usr/sbin/ipmitool";
@@ -19,6 +20,8 @@
       var args = cell.cdr.split(/\s+/);
       if (emptyc.config("ipmi.extra"))
         args = emptyc.config("ipmi.extra").split(/\s+/).concat(args);
+      var exits = {};
+      var t = Date.now();
       return emptyc.resolve(cell.car.split(',')).then(function(hosts) {
         if (process.stdin.setRawMode)
         {
@@ -26,31 +29,63 @@
           process.stdin.pause();
         }
         var funcs = [];
+        var progress_done = 0, progress_total = hosts.length;
+        var running = 0;
         hosts.forEach(function(h) {
           funcs.push(function() {
+            running++;
             if (emptyc.config("ipmi.prefix"))
               h = emptyc.config("ipmi.prefix") + h;
             if (emptyc.config("ipmi.suffix"))
               h = h + emptyc.config("ipmi.suffix");
-            var client = spawn(ipmitool, [ "-H", h ].concat(args), { stdio: "inherit" });
-            process.stdout.write(h + ": ");
+            var client = spawn(ipmitool, [ "-H", h ].concat(args), emptyc.config("parallel") ? { stdio: "ignore" } : { stdio: "inherit" });
+            if (!emptyc.config("parallel"))
+              process.stdout.write(h + ": ");
             var inthandler = function() {
               client.kill('SIGINT');
             };
             var deferred = Q.defer();
-            process.on('SIGINT', inthandler);
+            if (!emptyc.config("parallel"))
+              process.once('SIGINT', inthandler);
             client.on('close', function(code) {
-              process.removeListener('SIGINT', inthandler);
+              //process.removeListener('SIGINT', inthandler);
+              exits[h] = code;
               if (code !== 0)
                 emptyc.ev.emit("info", "ipmitool exited with code " + code);
-              deferred.resolve();
+              emptyc.ev.emit("exit", h, code);
+              emptyc.ev.emit("progress", ++progress_done, progress_total);
+              if (emptyc.config("parallel"))
+              {
+                running--;
+                if (running < 50)
+                {
+                  var func = funcs.shift();
+                  if (func)
+                    return func().then(function() { deferred.resolve() });
+                  else
+                    deferred.resolve();
+                }
+              }
+              else
+                deferred.resolve();
             });
             return deferred.promise;
           });
         });
-        return funcs.reduce(Q.when, Q.resolve());
+        if (emptyc.config("parallel"))
+          return funcs.shift()();
+        else
+          return funcs.reduce(Q.when, Q.resolve());
       }).fin(function() {
-          process.stdin.resume();
+        process.stdin.resume();
+        var failed = Object.keys(exits).filter(function(k){return exits[k] !== 0;});
+        emptyc.ev.emit("info", util.format("IPMI run took %d ms, %d hosts have failed",
+                Date.now() - t, failed.length));
+        if (failed.length > 0)
+        {
+          emptyc.ev.emit("failed", failed);
+          return Q.reject("Failed hosts: " + failed.join(','));
+        }
       });
     };
   };
