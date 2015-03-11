@@ -146,7 +146,12 @@
                 case 'w':
                   emptyc.oldmode = emptyc.mode;
                   emptyc.ev.emit("set-mode", "write");
+                  if (emptyc.config.parallel)
+                    process.stdout.write("\r\u001b[2K");
                   console.log("Press ^] to activate ``%s'' mode.", emptyc.oldmode);
+                  process.stdout.write(progress_line);
+                  if (emptyc.stdin.ready && emptyc.rl._refreshLine)
+                    emptyc.rl._refreshLine();
                   break;
                 case 'k':
                   emptyc.ev.emit("kill-child");
