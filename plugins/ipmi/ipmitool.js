@@ -54,22 +54,22 @@
                 emptyc.ev.emit("info", "ipmitool exited with code " + code);
               emptyc.ev.emit("exit", h, code);
               emptyc.ev.emit("progress", ++progress_done, progress_total);
-              if (emptyc.config("parallel"))
-              {
-                running--;
-                if (running < 50)
-                {
-                  var func = funcs.shift();
-                  if (func)
-                    return func().then(function() { deferred.resolve() });
-                  else
-                    deferred.resolve();
-                }
-              }
-              else
-                deferred.resolve();
+              deferred.resolve();
             });
-            return deferred.promise;
+            if (emptyc.config("parallel"))
+            {
+              running--;
+              var deferrends = [deferred.promise];
+              if (running < 50)
+              {
+                var func = funcs.shift();
+                if (func)
+                  deferrends.push(func());
+              }
+              return Q.allSettled(deferrends);
+            }
+            else
+              return deferred.promise;
           });
         });
         if (emptyc.config("parallel"))
