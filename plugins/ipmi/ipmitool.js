@@ -34,13 +34,14 @@
         hosts.forEach(function(h) {
           funcs.push(function() {
             running++;
+            var orig_h = h;
             if (emptyc.config("ipmi.prefix"))
               h = emptyc.config("ipmi.prefix") + h;
             if (emptyc.config("ipmi.suffix"))
               h = h + emptyc.config("ipmi.suffix");
             var client = spawn(ipmitool, [ "-H", h ].concat(args), emptyc.config("parallel") ? { stdio: "ignore" } : { stdio: "inherit" });
             if (!emptyc.config("parallel"))
-              process.stdout.write(h + ": ");
+              process.stdout.write(orig_h + ": ");
             var inthandler = function() {
               client.kill('SIGINT');
             };
@@ -48,11 +49,12 @@
             if (!emptyc.config("parallel"))
               process.once('SIGINT', inthandler);
             client.on('close', function(code) {
-              //process.removeListener('SIGINT', inthandler);
-              exits[h] = code;
+              if (!emptyc.config("parallel"))
+                process.removeListener('SIGINT', inthandler);
+              exits[orig_h] = code;
               if (code !== 0)
                 emptyc.ev.emit("info", "ipmitool exited with code " + code);
-              emptyc.ev.emit("exit", h, code);
+              emptyc.ev.emit("exit", orig_h, code);
               emptyc.ev.emit("progress", ++progress_done, progress_total);
               deferred.resolve();
             });
