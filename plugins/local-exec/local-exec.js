@@ -1,33 +1,33 @@
 // vim: ai:ts=2:sw=2:et:syntax=javascript
 (function() {
   "use strict";
-  var spawn = require('child_process').spawn;
+  var child_process = require('child_process');
+  var spawnAsync = require('child_process').spawn;
   var Q = require('q');
   var net = require('net');
   module.exports.init = function local_init(emptyc) {
+    emptyc.spawn = function(deferred, argv0, argv) {
+      process.stdin.setRawMode(false);
+      process.once('SIGINT', () => {})
+      var status = child_process.spawnSync(argv0, argv, {stdio:"inherit"});
+      if (status.error)
+        deferred.reject(argv0 + " has failed: " + status.error.toString());
+      else if (status.status !== 0)
+        deferred.reject(argv0 + " exited with code " + status.status);
+      else if (status.signal)
+        deferred.reject(argv0 + " has been killed with " + status.signal);
+      else
+        deferred.resolve();
+      return deferred.promise;
+    };
+
     emptyc.commands.ssh = function(car) {
       /* help: <host>: run interactive ssh to <host> */
-      var deferred = Q.defer();
-      process.stdin.setRawMode(false);
-      process.stdin.pause();
-      var client = spawn("ssh", [
+      return emptyc.spawn(Q.defer(), "ssh", [
           "-oStrictHostKeyChecking=no", "-oUserKnownHostsFile=/dev/null",
           "-l", this.config.user,
           car
-        ], { stdio: "inherit" });
-      var inthandler = function() {
-        client.kill('SIGINT');
-      };
-      process.on('SIGINT', inthandler);
-      client.on('close', function(code) {
-        process.stdin.resume();
-        process.removeListener('SIGINT', inthandler);
-        if (code !== 0)
-          deferred.reject("SSH exited with code " + code);
-        else
-          deferred.resolve();
-      });
-      return deferred.promise;
+        ]);
     };
 
     emptyc.commands.ping = function(car) {
@@ -58,34 +58,14 @@
           });
         }
         else if (keys.length == 1)
-        {
-          var deferred = Q.defer();
-          process.stdin.setRawMode(false);
-          process.stdin.pause();
-          var client = spawn("ping", [
-              car
-            ], { stdio: "inherit" });
-          var inthandler = function() {
-            client.kill('SIGINT');
-          };
-          process.on('SIGINT', inthandler);
-          client.on('close', function(code) {
-            process.stdin.resume();
-            process.removeListener('SIGINT', inthandler);
-            if (code !== 0)
-              deferred.reject("ping exited with code " + code);
-            else
-              deferred.resolve();
-          });
-          children.push(deferred.promise);
-        }
+          children.push(emptyc.spawn(Q.defer(), "ping", [car]));
         else
         {
           keys.forEach(function(k) {
             var host = k;
             var deferred = Q.defer();
-            var client = spawn("ping", [ "-c1", "-n", "-q", k ]);
-            client.on('close', function(code) {
+            var client = spawnAsync("ping", [ "-c1", "-n", "-q", k ]);
+            client.on('exit', function(code) {
               if (code !== 0) deferred.reject(host);
                          else deferred.resolve();
             });
@@ -109,25 +89,7 @@
     emptyc.commands.local = function(car) {
       /* help: <cmd>: run cmd on local system */
       if (!car) return Q.reject("local <cmd>");
-      var deferred = Q.defer();
-      process.stdin.setRawMode(false);
-      process.stdin.pause();
-      var client = spawn("sh", [
-          "-c", car
-        ], { stdio: "inherit" });
-      var inthandler = function() {
-        client.kill('SIGINT');
-      };
-      process.on('SIGINT', inthandler);
-      client.on('close', function(code) {
-        process.stdin.resume();
-        process.removeListener('SIGINT', inthandler);
-        if (code !== 0)
-          deferred.reject("exited with code " + code);
-        else
-          deferred.resolve();
-      });
-      return deferred.promise;
+      return emptyc.spawn(Q.defer(), "sh", ["-c", car]);
     };
   };
 }());

@@ -133,7 +133,7 @@
       {
         process.stdin.setRawMode(true);
       }
-      process.stdin.on("readable", function() {
+      process.stdin.on("readable", function(x) {
         var d = process.stdin.read();
         if (!emptyc.stdin.ready)
         {

@@ -26,11 +26,12 @@
         if (process.stdin.setRawMode)
         {
           process.stdin.setRawMode(false);
-          process.stdin.pause();
         }
         var funcs = [];
         var progress_done = 0, progress_total = hosts.length;
         var running = 0;
+        if (emptyc.config("parallel"))
+          process.once('SIGINT', () => {});
         hosts.forEach(function(h) {
           funcs.push(function() {
             running++;
@@ -39,8 +40,17 @@
               h = emptyc.config("ipmi.prefix") + h;
             if (emptyc.config("ipmi.suffix"))
               h = h + emptyc.config("ipmi.suffix");
-            var client = spawn(ipmitool, [ "-H", h ].concat(args), emptyc.config("parallel") ? { stdio: "ignore" } : { stdio: "inherit" });
-            if (!emptyc.config("parallel"))
+            var client = spawn("sh", ["-c", ipmitool + " -H " + h + " " + args.join(" ")], emptyc.config("parallel") ? { stdio: "pipe" } : { stdio: "inherit" });
+            if (emptyc.config("parallel"))
+            {
+              client.stdout.on("data", function(data) {
+                emptyc.ev.emit("output", data.toString("utf8").trim(), orig_h);
+              });
+              client.stderr.on("data", function(data) {
+                emptyc.ev.emit("output", data.toString("utf8").trim(), orig_h, "stderr");
+              });
+            }
+            else
               process.stdout.write(orig_h + ": ");
             var inthandler = function() {
               client.kill('SIGINT');
@@ -48,7 +58,7 @@
             var deferred = Q.defer();
             if (!emptyc.config("parallel"))
               process.once('SIGINT', inthandler);
-            client.on('close', function(code) {
+            client.on('exit', function(code) {
               if (!emptyc.config("parallel"))
                 process.removeListener('SIGINT', inthandler);
               exits[orig_h] = code;
@@ -79,7 +89,6 @@
         else
           return funcs.reduce(Q.when, Q.resolve());
       }).fin(function() {
-        process.stdin.resume();
         var failed = Object.keys(exits).filter(function(k){return exits[k] !== 0;});
         emptyc.ev.emit("info", util.format("IPMI run took %d ms, %d hosts have failed",
                 Date.now() - t, failed.length));
