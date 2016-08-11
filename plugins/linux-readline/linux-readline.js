@@ -36,6 +36,7 @@ module.exports.init = function init(emptyc) {
   });
   var libreadline_so = ffi.DynamicLibrary('libreadline.so');
   var rl_attempted_completion_function = libreadline_so.get('rl_attempted_completion_function');
+  var rl_attempted_completion_over = libreadline_so.get('rl_attempted_completion_over').reinterpret(1,0);
   var rl_line_buffer = libreadline_so.get('rl_line_buffer');
   var saved_prompt = ">";
   var initialized = false;
@@ -61,8 +62,9 @@ module.exports.init = function init(emptyc) {
     var buffer = new Buffer(4096);
 
     function completer(text, start, end) {
+      rl_attempted_completion_over.writeUInt8(1);
       //opts.completer(text, (results) => fs.writeFileSync(pipe[1], JSON.stringify(results) + "\n"));
-      var rl_line_buffer = libreadline_so.get('rl_line_buffer');
+      //var rl_line_buffer = libreadline_so.get('rl_line_buffer');
       text = rl_line_buffer.readPointer().readCString();
       opts.completer(text, function(err, results) {
         var j = new Buffer(JSON.stringify(results) + "\n");
@@ -73,14 +75,16 @@ module.exports.init = function init(emptyc) {
         buffer.writeUInt8(0, bytes);
       try {
         var result = JSON.parse(ref.readCString(buffer, 0));
-        result = result[0].map((s) => s.substring(start)).filter((s) => s.trim().length);
+        result = result[0].map((s) => s.substring(start).trimRight()).filter((s) => s.trim().length);
       } catch(e) {
         console.log("Cannot read JSON at " + ref.readCString(buffer, 0) + " / " + util.inspect(ref.readCString(buffer,0)));
         console.log(e);
       }
       if (result === null) result = [];
-      if (result.length != 1)
+      if (result.length > 1)
         result.unshift(text.substring(start));
+      else if (result.length === 0)
+        return ref.NULL_POINTER.deref();
       var out = ref.alloc(ArrayType('string', result.length + 1));
       var cstr = result.map((s) => ref.allocCString(s));
       cstr = cstr.map((s) => libc.strdup(s));
@@ -123,7 +127,7 @@ module.exports.init = function init(emptyc) {
         rl.history.reverse().forEach((s) => libreadline.add_history(s));
       }
 
-      opts.output.write("\x1B[K\r\n");
+      opts.output.write("\x1B[K");
       libreadline.rl_callback_handler_install(saved_prompt, line_handler);
       opts.input.on("data", stuffer);
     };
