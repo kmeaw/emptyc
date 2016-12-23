@@ -22,6 +22,7 @@
         args = emptyc.config("ipmi.extra").split(/\s+/).concat(args);
       var exits = {};
       var t = Date.now();
+      var dummyhandler = () => {};
       return emptyc.resolve(cell.car.split(',')).then(function(hosts) {
         if (process.stdin.setRawMode)
         {
@@ -31,7 +32,7 @@
         var progress_done = 0, progress_total = hosts.length;
         var running = 0;
         if (emptyc.config("parallel"))
-          process.once('SIGINT', () => {});
+          process.once('SIGINT', dummyhandler);
         hosts.forEach(function(h) {
           funcs.push(function() {
             running++;
@@ -89,6 +90,8 @@
         else
           return funcs.reduce(Q.when, Q.resolve());
       }).fin(function() {
+        if (emptyc.config("parallel"))
+          process.removeListener('SIGINT', dummyhandler);
         var failed = Object.keys(exits).filter(function(k){return exits[k] !== 0;});
         emptyc.ev.emit("info", util.format("IPMI run took %d ms, %d hosts have failed",
                 Date.now() - t, failed.length));
