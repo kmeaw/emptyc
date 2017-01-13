@@ -11,6 +11,7 @@ var pipe;
 
 module.exports.init = function init(emptyc) {
   if (process.platform != 'linux') return Q.resolve();
+  if (emptyc.config("readline.enabled")) return Q.resolve();
   var ffi = require("ffi");
   var ref = require('ref');
   var ArrayType = require("ref-array");

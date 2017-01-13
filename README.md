@@ -22,3 +22,6 @@ emptyd node.js client implementation
 
 npm install emptyc
 
+### Random notes
+
+  - you can enable readline in GNU/Linux: {"readline": {"enabled": true}}
