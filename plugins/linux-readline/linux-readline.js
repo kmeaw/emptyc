@@ -11,7 +11,7 @@ var pipe;
 
 module.exports.init = function init(emptyc) {
   if (process.platform != 'linux') return Q.resolve();
-  if (emptyc.config("readline.enabled")) return Q.resolve();
+  if (!emptyc.config("readline.enabled")) return Q.resolve();
   var ffi = require("ffi");
   var ref = require('ref');
   var ArrayType = require("ref-array");
@@ -120,7 +120,7 @@ module.exports.init = function init(emptyc) {
     rl._refreshLine = function() {
       this.prompt();
     };
-  //  rl._refreshLine = () => true,
+  //  rl._refreshLine = function() { return true; };
     rl.prompt = function() {
       if (!initialized)
       {

@@ -8,7 +8,7 @@
   module.exports.init = function local_init(emptyc) {
     emptyc.spawn = function(deferred, argv0, argv) {
       process.stdin.setRawMode(false);
-      process.once('SIGINT', () => {})
+      process.once('SIGINT', function(){})
       var status = child_process.spawnSync(argv0, argv, {stdio:"inherit"});
       if (status.error)
         deferred.reject(argv0 + " has failed: " + status.error.toString());

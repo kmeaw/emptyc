@@ -22,7 +22,7 @@
         args = emptyc.config("ipmi.extra").split(/\s+/).concat(args);
       var exits = {};
       var t = Date.now();
-      var dummyhandler = () => {};
+      var dummyhandler = function() {};
       return emptyc.resolve(cell.car.split(',')).then(function(hosts) {
         if (process.stdin.setRawMode)
         {
