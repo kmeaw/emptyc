@@ -60,9 +60,10 @@ module.exports.init = function init(emptyc) {
     pipe = new Buffer(8); // [ -1, -1 ];
     libc.pipe(pipe);
     pipe = [ref.get(pipe, 0, ref.types.int), ref.get(pipe, ref.types.int.size, ref.types.int)];
-    var buffer = new Buffer(4096);
+    var buffer = new Buffer(65536);
 
     function completer(text, start, end) {
+      var result = null;
       rl_attempted_completion_over.writeUInt8(1);
       //opts.completer(text, (results) => fs.writeFileSync(pipe[1], JSON.stringify(results) + "\n"));
       //var rl_line_buffer = libreadline_so.get('rl_line_buffer');
@@ -71,15 +72,19 @@ module.exports.init = function init(emptyc) {
         var j = new Buffer(JSON.stringify(results) + "\n");
         libc.write(pipe[1], j, Buffer.byteLength(j));
       });
-      var bytes = libc.read(pipe[0], buffer, buffer.length);
+      var bytes = libc.read(pipe[0], buffer, buffer.length - 1);
       if (bytes >= 0)
         buffer.writeUInt8(0, bytes);
+      else
+        console.log("read() failed!");
+
       try {
-        var result = JSON.parse(ref.readCString(buffer, 0));
+        result = JSON.parse(ref.readCString(buffer, 0));
         result = result[0].map((s) => s.substring(start).trimRight()).filter((s) => s.trim().length);
       } catch(e) {
         console.log("Cannot read JSON at " + ref.readCString(buffer, 0) + " / " + util.inspect(ref.readCString(buffer,0)));
         console.log(e);
+        return ref.NULL_POINTER.deref();
       }
       if (result === null) result = [];
       if (result.length > 1)
