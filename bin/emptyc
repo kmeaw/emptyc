@@ -13,6 +13,7 @@
   var emptyc = new Emptyc();
   var NodeCache = require("node-cache");
   var mkdirp = require('mkdirp');
+  var moment = require('moment');
   var colors = require('colors');
   var EventEmitter = require('events').EventEmitter;
 
@@ -22,6 +23,7 @@
   var cachepath = path.join(process.env.XDG_CACHE_HOME || path.join(homepath, ".cache"), "emptyc");
   var historypath = path.join(homepath, ".emptyc.history");
 
+  moment.relativeTimeThreshold('ss', -1);
   mkdirp.sync(cachepath);
 
   var applyconf = function(data) {
@@ -44,16 +46,31 @@
     });
     var progress_chars = "/-\\|";
     var PSCALE = 40;
+    var lastvalue = 0;
+    var lasttime = new Date();
+    var eta = false;
     emptyc.ev.on("progress", function(a, b, msg) {
       if (emptyc.config.parallel)
       {
         var c = progress_chars.charAt(0);
         var value = a/b;
+        if (value < lastvalue || value == 0)
+        {
+          eta = false;
+        }
+        else if (value > lastvalue)
+        {
+          var dy = value - lastvalue;
+          var dt = (new Date() - lasttime);
+          eta = moment.duration(dt / dy * (1 - value)).humanize();
+        }
+        lasttime = new Date().valueOf();
+        lastvalue = value;
         progress_chars = progress_chars.substr(1) + c;
         progress_line = "\r\u001b[2K[" + colors.green(Array(parseInt(value*PSCALE)+1).join("|"));
         if (PSCALE-parseInt(value*PSCALE) > 0)
           progress_line = progress_line + Array(PSCALE-parseInt(value*PSCALE)+1).join(" ");
-        progress_line = progress_line + "] " + c + " " + a + "/" + b + (msg ? " " + msg : "") + "\r";
+        progress_line = progress_line + "] " + c + " " + a + "/" + b + (msg ? " " + msg : "") + (eta ? " ETA " + eta : "") + "\r";
         process.stdout.write(progress_line);
       }
     });
